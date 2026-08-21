@@ -1,0 +1,62 @@
+name: Build OfficeOxide Test APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract test bench
+        run: |
+          unzip -o OfficeOxide_Android_TestBench_v1.zip -d testbench
+          echo "Extracted:"
+          find testbench -maxdepth 3 -type f | head -100
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK/NDK
+        run: |
+          sdkmanager "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.2.12479018"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Configure Android NDK
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Make build script executable
+        working-directory: testbench
+        run: chmod +x build-rust-android.sh
+
+      - name: Build APK
+        working-directory: testbench
+        run: |
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OfficeOxide-TestBench-APK
+          path: testbench/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
