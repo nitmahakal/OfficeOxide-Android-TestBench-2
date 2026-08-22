@@ -14,7 +14,7 @@ jobs:
       - name: Extract test bench
         run: |
           unzip -o OfficeOxide_Android_TestBench_v1.zip -d testbench
-          echo "Extracted:"
+          echo "Extracted project:"
           find testbench -maxdepth 3 -type f | head -100
 
       - name: Set up Java
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK/NDK
+      - name: Install Android SDK and NDK
         run: |
           sdkmanager "platform-tools" \
             "platforms;android-35" \
@@ -45,14 +45,19 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
 
-      - name: Make build script executable
+      - name: Make Rust build script executable
         working-directory: testbench
         run: chmod +x build-rust-android.sh
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.13'
 
       - name: Build APK
         working-directory: testbench
         run: |
-          ./gradlew assembleDebug
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
